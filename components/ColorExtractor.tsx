@@ -22,7 +22,6 @@ function extractDominantColors(
   imageData: Uint8ClampedArray,
   k: number
 ): [number, number, number][] {
-  // Sample pixels (skip transparent, take every Nth)
   const pixels: [number, number, number][] = [];
   const step = 8;
   for (let i = 0; i < imageData.length; i += 4 * step) {
@@ -31,7 +30,6 @@ function extractDominantColors(
   }
   if (pixels.length < k) return pixels.slice(0, k);
 
-  // k-means++ initialization
   const centroids: [number, number, number][] = [
     pixels[Math.floor(Math.random() * pixels.length)],
   ];
@@ -54,23 +52,16 @@ function extractDominantColors(
     }
   }
 
-  // Iterate k-means
   let current = [...centroids] as [number, number, number][];
   for (let iter = 0; iter < 12; iter++) {
-    const clusters: [number, number, number][][] = Array.from(
-      { length: k },
-      () => []
-    );
+    const clusters: [number, number, number][][] = Array.from({ length: k }, () => []);
     for (const p of pixels) {
       let best = 0;
       let bestDist = Infinity;
       for (let i = 0; i < current.length; i++) {
         const c = current[i];
         const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
-        if (d < bestDist) {
-          bestDist = d;
-          best = i;
-        }
+        if (d < bestDist) { bestDist = d; best = i; }
       }
       clusters[best].push(p);
     }
@@ -81,15 +72,10 @@ function extractDominantColors(
         (acc, p) => [acc[0] + p[0], acc[1] + p[1], acc[2] + p[2]],
         [0, 0, 0]
       );
-      return [
-        Math.round(sum[0] / n),
-        Math.round(sum[1] / n),
-        Math.round(sum[2] / n),
-      ];
+      return [Math.round(sum[0] / n), Math.round(sum[1] / n), Math.round(sum[2] / n)];
     });
   }
 
-  // Sort by cluster size
   const clusterSizes = new Array(k).fill(0);
   for (const p of pixels) {
     let best = 0;
@@ -97,10 +83,7 @@ function extractDominantColors(
     for (let i = 0; i < current.length; i++) {
       const c = current[i];
       const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
-      if (d < bestDist) {
-        bestDist = d;
-        best = i;
-      }
+      if (d < bestDist) { bestDist = d; best = i; }
     }
     clusterSizes[best]++;
   }
@@ -116,12 +99,12 @@ export default function ColorExtractor() {
   const [colors, setColors] = useState<ExtractedColor[]>([]);
   const [loading, setLoading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [colorCount, setColorCount] = useState<3 | 4 | 5>(3);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const extractColors = useCallback((url: string) => {
     setLoading(true);
     setColors([]);
-
     const img = new window.Image();
     img.onload = () => {
       try {
@@ -130,17 +113,12 @@ export default function ColorExtractor() {
         const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
         canvas.width = Math.floor(img.width * scale);
         canvas.height = Math.floor(img.height * scale);
-
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("canvas context unavailable");
-
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
         const palette = extractDominantColors(data, 5);
-        setColors(
-          palette.map((rgb) => ({ rgb, hex: rgbToHex(rgb[0], rgb[1], rgb[2]) }))
-        );
+        setColors(palette.map((rgb) => ({ rgb, hex: rgbToHex(rgb[0], rgb[1], rgb[2]) })));
       } catch (err) {
         console.error("Color extraction failed:", err);
       } finally {
@@ -151,15 +129,12 @@ export default function ColorExtractor() {
     img.src = url;
   }, []);
 
-  const handleFile = useCallback(
-    (file: File) => {
-      if (!file.type.startsWith("image/")) return;
-      const url = URL.createObjectURL(file);
-      setImageUrl(url);
-      extractColors(url);
-    },
-    [extractColors]
-  );
+  const handleFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    extractColors(url);
+  }, [extractColors]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -183,7 +158,9 @@ export default function ColorExtractor() {
         onDragLeave={() => setDragging(false)}
         className={`
           relative flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed cursor-pointer select-none transition-colors
-          ${dragging ? "border-indigo-400 bg-indigo-50" : "border-gray-300 bg-white hover:border-indigo-300 hover:bg-gray-50"}
+          ${dragging
+            ? "border-indigo-400 bg-indigo-50 dark:bg-indigo-950"
+            : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 hover:border-indigo-300 hover:bg-gray-50 dark:hover:bg-gray-800"}
           ${imageUrl ? "min-h-[260px]" : "min-h-[220px] py-12"}
         `}
       >
@@ -205,7 +182,7 @@ export default function ColorExtractor() {
         ) : (
           <>
             <svg
-              className="w-12 h-12 text-gray-300"
+              className="w-12 h-12 text-gray-300 dark:text-gray-600"
               fill="none"
               stroke="currentColor"
               strokeWidth={1.5}
@@ -217,29 +194,54 @@ export default function ColorExtractor() {
                 d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
               />
             </svg>
-            <p className="text-gray-500 text-sm font-medium">
-              이미지를 드래그하거나 클릭해서 업로드
+            <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">
+              Drag & drop an image or click to upload
             </p>
-            <p className="text-gray-400 text-xs">PNG, JPG, WEBP, GIF 지원</p>
+            <p className="text-gray-400 dark:text-gray-500 text-xs">PNG, JPG, WEBP, GIF supported</p>
           </>
         )}
 
         {imageUrl && (
-          <p className="absolute bottom-3 text-xs text-gray-400">
-            다른 이미지를 업로드하려면 클릭하세요
+          <p className="absolute bottom-3 text-xs text-gray-400 dark:text-gray-500">
+            Click to upload a different image
           </p>
         )}
       </div>
 
-      {/* Results */}
+      {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+        <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
           <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin" />
-          색상 분석 중...
+          Analyzing colors…
         </div>
       )}
 
-      {colors.length > 0 && !loading && <ColorPalette colors={colors} />}
+      {/* Results */}
+      {colors.length > 0 && !loading && (
+        <>
+          {/* Color count toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">Colors</span>
+            <div className="flex rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              {([3, 4, 5] as const).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setColorCount(n)}
+                  className={`px-4 py-1.5 text-sm font-semibold transition-colors
+                    ${colorCount === n
+                      ? "bg-indigo-500 text-white"
+                      : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <ColorPalette colors={colors.slice(0, colorCount)} />
+        </>
+      )}
     </div>
   );
 }

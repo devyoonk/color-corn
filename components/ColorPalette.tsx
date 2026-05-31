@@ -22,8 +22,8 @@ export default function ColorPalette({ colors }: { colors: Color[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest">
-        추출된 색상 ({colors.length}개)
+      <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+        Extracted Colors ({colors.length})
       </h2>
 
       {/* Wide swatches */}
@@ -63,7 +63,7 @@ export default function ColorPalette({ colors }: { colors: Color[] }) {
                   ${copied === color.hex ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
                 `}
               >
-                {copied === color.hex ? "복사됨!" : "복사"}
+                {copied === color.hex ? "Copied!" : "Copy"}
               </span>
             </button>
           );

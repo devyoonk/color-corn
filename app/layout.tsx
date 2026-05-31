@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "색상 추출기",
-  description: "이미지에서 주요 색상을 자동으로 추출합니다",
+  title: "Color Extractor",
+  description: "Automatically extract dominant colors from any image",
 };
 
 export default function RootLayout({
@@ -27,7 +27,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
+        {children}
+      </body>
     </html>
   );
 }
